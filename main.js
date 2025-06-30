@@ -1,11 +1,13 @@
 // TODO: Thay đổi URL bên dưới thành URL Render backend của bạn khi deploy
 const SIGNALING_SERVER_URL = 'https://xemchung-backend.onrender.com'; // ví dụ: 'https://xemchung-backend.onrender.com'
 const socket = io(SIGNALING_SERVER_URL);
-let pc = new RTCPeerConnection();
+let pc = null;
 let localStream;
 let isSharing = false;
 let isConnected = false;
 let role = null; // 'sharer' hoặc 'viewer'
+let iceQueue = [];
+let remoteDescSet = false;
 
 const statusEl = document.getElementById('status');
 const localVideo = document.getElementById('localVideo');
@@ -23,6 +25,9 @@ const btnShare = document.getElementById('btnShare');
 const btnView = document.getElementById('btnView');
 const mainContainer = document.getElementById('mainContainer');
 const controls = document.getElementById('controls');
+const remoteVideoControls = document.getElementById('remoteVideoControls');
+const remoteFullscreenBtn = document.getElementById('remoteFullscreen');
+const remoteExpandBtn = document.getElementById('remoteExpand');
 
 const QUALITY_PRESETS = {
   ultra: { width: 3840, height: 2160, frameRate: 60, bitrate: 12000_000 }, // 4K
@@ -42,6 +47,26 @@ function setStatus(text, color = '#a0e7ff') {
   statusEl.style.color = color;
 }
 
+function createPeerConnection() {
+  if (pc) {
+    pc.close();
+  }
+  pc = new RTCPeerConnection();
+  remoteDescSet = false;
+  iceQueue = [];
+  pc.onicecandidate = e => {
+    if (e.candidate) socket.emit('signal', { candidate: e.candidate });
+  };
+  pc.ontrack = e => {
+    if (role === 'viewer') {
+      remoteVideo.srcObject = e.streams[0];
+      remoteVideo.hidden = false;
+      remoteVideoControls.hidden = false;
+      setStatus('Đang xem màn hình đối phương', '#6f6fff');
+    }
+  };
+}
+
 btnShare.onclick = () => {
   role = 'sharer';
   roleSelect.style.display = 'none';
@@ -49,6 +74,7 @@ btnShare.onclick = () => {
   controls.style.display = 'flex';
   localVideo.hidden = true;
   remoteVideo.hidden = true;
+  createPeerConnection();
 };
 
 btnView.onclick = () => {
@@ -59,11 +85,13 @@ btnView.onclick = () => {
   localVideo.hidden = true;
   remoteVideo.hidden = true;
   setStatus('Đang chờ người chia sẻ...', '#a0e7ff');
+  createPeerConnection();
   socket.emit('viewer-ready');
 };
 
 shareBtn.onclick = async () => {
   try {
+    createPeerConnection();
     const preset = QUALITY_PRESETS[qualitySelect.value] || QUALITY_PRESETS.high;
     localStream = await navigator.mediaDevices.getDisplayMedia({
       video: {
@@ -139,6 +167,11 @@ socket.on('signal', async data => {
   if (role === 'viewer') {
     if (data.desc) {
       await pc.setRemoteDescription(data.desc);
+      remoteDescSet = true;
+      // Add all queued ICE candidates
+      while (iceQueue.length > 0) {
+        await pc.addIceCandidate(iceQueue.shift());
+      }
       if (data.desc.type === 'offer') {
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
@@ -146,7 +179,11 @@ socket.on('signal', async data => {
       }
     }
     if (data.candidate) {
-      await pc.addIceCandidate(data.candidate);
+      if (remoteDescSet) {
+        await pc.addIceCandidate(data.candidate);
+      } else {
+        iceQueue.push(data.candidate);
+      }
     }
   } else if (role === 'sharer') {
     if (data.desc) {
@@ -162,17 +199,6 @@ socket.on('signal', async data => {
   }
 });
 
-pc.onicecandidate = e => {
-  if (e.candidate) socket.emit('signal', { candidate: e.candidate });
-};
-pc.ontrack = e => {
-  if (role === 'viewer') {
-    remoteVideo.srcObject = e.streams[0];
-    remoteVideo.hidden = false;
-    setStatus('Đang xem màn hình đối phương', '#6f6fff');
-  }
-};
-
 // Fullscreen & Expanded view logic
 function toggleFullscreen(video) {
   if (video.requestFullscreen) video.requestFullscreen();
@@ -184,6 +210,8 @@ function toggleExpand(video) {
 }
 localFullscreenBtn.onclick = () => toggleFullscreen(localVideo);
 localExpandBtn.onclick = () => toggleExpand(localVideo);
+remoteFullscreenBtn.onclick = () => toggleFullscreen(remoteVideo);
+remoteExpandBtn.onclick = () => toggleExpand(remoteVideo);
 
 // Lắng nghe viewer-ready (chỉ sharer xử lý)
 socket.on('viewer-ready', async () => {
@@ -202,4 +230,5 @@ window.addEventListener('load', () => {
   localVideoControls.hidden = true;
   stopShareBtn.style.display = 'none';
   remoteVideo.hidden = true;
+  remoteVideoControls.hidden = true;
 }); 
