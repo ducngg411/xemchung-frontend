@@ -5,8 +5,11 @@ let pc = new RTCPeerConnection();
 let localStream;
 let isSharing = false;
 let isConnected = false;
+let role = null; // 'sharer' hoặc 'viewer'
+
 const statusEl = document.getElementById('status');
 const localVideo = document.getElementById('localVideo');
+const remoteVideo = document.getElementById('remoteVideo');
 const shareBtn = document.getElementById('share');
 const stopShareBtn = document.getElementById('stopShare');
 const toastEl = document.getElementById('toast');
@@ -15,6 +18,11 @@ const localVideoControls = document.getElementById('localVideoControls');
 const localFullscreenBtn = document.getElementById('localFullscreen');
 const localExpandBtn = document.getElementById('localExpand');
 const qualitySelect = document.getElementById('quality');
+const roleSelect = document.getElementById('roleSelect');
+const btnShare = document.getElementById('btnShare');
+const btnView = document.getElementById('btnView');
+const mainContainer = document.getElementById('mainContainer');
+const controls = document.getElementById('controls');
 
 const QUALITY_PRESETS = {
   ultra: { width: 3840, height: 2160, frameRate: 60, bitrate: 12000_000 }, // 4K
@@ -33,6 +41,25 @@ function setStatus(text, color = '#a0e7ff') {
   statusEl.textContent = text;
   statusEl.style.color = color;
 }
+
+btnShare.onclick = () => {
+  role = 'sharer';
+  roleSelect.style.display = 'none';
+  mainContainer.style.display = '';
+  controls.style.display = 'flex';
+  localVideo.hidden = true;
+  remoteVideo.hidden = true;
+};
+
+btnView.onclick = () => {
+  role = 'viewer';
+  roleSelect.style.display = 'none';
+  mainContainer.style.display = '';
+  controls.style.display = 'none';
+  localVideo.hidden = true;
+  remoteVideo.hidden = true;
+  setStatus('Đang chờ người chia sẻ...', '#a0e7ff');
+};
 
 shareBtn.onclick = async () => {
   try {
@@ -106,6 +133,45 @@ socket.on('viewer-count', n => {
 // Gửi yêu cầu cập nhật số người xem khi kết nối
 socket.emit('get-viewer-count');
 
+// WebRTC signaling logic
+socket.on('signal', async data => {
+  if (role === 'viewer') {
+    if (data.desc) {
+      await pc.setRemoteDescription(data.desc);
+      if (data.desc.type === 'offer') {
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        socket.emit('signal', { desc: pc.localDescription });
+      }
+    }
+    if (data.candidate) {
+      await pc.addIceCandidate(data.candidate);
+    }
+  } else if (role === 'sharer') {
+    if (data.desc) {
+      await pc.setRemoteDescription(data.desc);
+      if (data.desc.type === 'answer') {
+        setStatus('Đối phương đã kết nối!', '#4f8cff');
+        showToast('Đối phương đã kết nối!');
+      }
+    }
+    if (data.candidate) {
+      await pc.addIceCandidate(data.candidate);
+    }
+  }
+});
+
+pc.onicecandidate = e => {
+  if (e.candidate) socket.emit('signal', { candidate: e.candidate });
+};
+pc.ontrack = e => {
+  if (role === 'viewer') {
+    remoteVideo.srcObject = e.streams[0];
+    remoteVideo.hidden = false;
+    setStatus('Đang xem màn hình đối phương', '#6f6fff');
+  }
+};
+
 // Fullscreen & Expanded view logic
 function toggleFullscreen(video) {
   if (video.requestFullscreen) video.requestFullscreen();
@@ -124,4 +190,5 @@ window.addEventListener('load', () => {
   localVideo.hidden = true;
   localVideoControls.hidden = true;
   stopShareBtn.style.display = 'none';
+  remoteVideo.hidden = true;
 }); 

@@ -50,7 +50,7 @@
       aspect-ratio: 16/9;
       transition: border 0.2s, width 0.3s, height 0.3s;
     }
-    #localVideo[hidden] {
+    #localVideo[hidden], #remoteVideo[hidden] {
       display: none;
     }
     .controls {
@@ -156,6 +156,24 @@
       border: 3px solid #4f8cff !important;
       z-index: 10;
     }
+    .role-select {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      margin: 32px 0 24px 0;
+      background: #23283a;
+      border-radius: 12px;
+      padding: 32px 32px 24px 32px;
+      box-shadow: 0 2px 12px #0005;
+      max-width: 350px;
+    }
+    .role-select button {
+      width: 220px;
+      font-size: 1.15rem;
+      padding: 14px 0;
+      margin: 0;
+    }
     @media (max-width: 700px) {
       .container { padding: 12px 2vw; }
       .videos { flex-direction: column; gap: 12px; }
@@ -168,13 +186,18 @@
     <h1>Xem Chung <span style="font-size:1.2rem; color:#4f8cff;">💙</span></h1>
     <div class="guide">
       <b>Hướng dẫn:</b> <br>
-      1. Một người bấm <b>Chia sẻ màn hình</b>.<br>
-      2. Người còn lại sẽ tự động xem màn hình được chia sẻ.<br>
+      1. Một người chọn <b>Chia sẻ màn hình</b>.<br>
+      2. Người còn lại chọn <b>Xem màn hình</b>.<br>
       <span style="color:#a0e7ff;">Tip:</span> Có thể mở song song Messenger/Zalo để trò chuyện.
     </div>
   </header>
-  <div class="container">
-    <div class="controls">
+  <div class="role-select" id="roleSelect">
+    <h2>Bạn muốn làm gì?</h2>
+    <button id="btnShare">Chia sẻ màn hình của tôi</button>
+    <button id="btnView">Xem màn hình người khác</button>
+  </div>
+  <div class="container" id="mainContainer" style="display:none;">
+    <div class="controls" id="controls">
       <button id="share">Chia sẻ màn hình</button>
       <button id="stopShare" style="display:none; background:linear-gradient(90deg,#ff4f4f,#ff6f6f);">Dừng chia sẻ</button>
       <select id="quality" class="quality-select" title="Chọn chất lượng hình ảnh">
@@ -189,6 +212,7 @@
     <div class="videos">
       <div style="display:flex; flex-direction:column; align-items:center;">
         <video id="localVideo" autoplay muted playsinline hidden></video>
+        <video id="remoteVideo" autoplay playsinline hidden></video>
         <div class="video-controls" id="localVideoControls" hidden>
           <button class="icon-btn" id="localFullscreen" title="Toàn màn hình">⛶</button>
           <button class="icon-btn" id="localExpand" title="Mở rộng">⤢</button>
