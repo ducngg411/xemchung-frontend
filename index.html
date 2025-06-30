@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Xem Chung - Chia sẻ màn hình chất lượng cao</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      background: #181c24;
+      color: #f3f3f3;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    header {
+      margin-top: 32px;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .container {
+      background: #23283a;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px #0006;
+      padding: 32px 24px 24px 24px;
+      margin-top: 16px;
+      width: 95vw;
+      max-width: 900px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .videos {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      margin: 24px 0 8px 0;
+      width: 100%;
+    }
+    video {
+      background: #111;
+      border-radius: 12px;
+      border: 2px solid #444;
+      box-shadow: 0 2px 8px #0005;
+      max-width: 44vw;
+      max-height: 60vh;
+      aspect-ratio: 16/9;
+      transition: border 0.2s, width 0.3s, height 0.3s;
+    }
+    #localVideo[hidden] {
+      display: none;
+    }
+    .controls {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 8px;
+      align-items: center;
+    }
+    .video-controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 6px;
+      justify-content: center;
+    }
+    button {
+      background: linear-gradient(90deg, #4f8cff, #6f6fff);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 8px #0003;
+      transition: background 0.2s, transform 0.1s;
+    }
+    button:active {
+      transform: scale(0.97);
+    }
+    .icon-btn {
+      padding: 8px 12px;
+      font-size: 1.2rem;
+      border-radius: 6px;
+      background: #2a3147;
+      color: #a0e7ff;
+      border: 1px solid #3a405a;
+      box-shadow: none;
+      transition: background 0.2s;
+    }
+    .icon-btn:active {
+      background: #4f8cff;
+      color: #fff;
+    }
+    .status {
+      font-size: 1rem;
+      color: #a0e7ff;
+      margin-left: 8px;
+      min-width: 120px;
+    }
+    .viewer-count {
+      font-size: 1rem;
+      color: #ffb347;
+      margin-left: 16px;
+      min-width: 80px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .quality-select {
+      background: #23283a;
+      color: #a0e7ff;
+      border: 1px solid #3a405a;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 1rem;
+      margin-left: 8px;
+      outline: none;
+    }
+    .guide {
+      background: #1a1e2a;
+      border-radius: 8px;
+      padding: 12px 18px;
+      margin-bottom: 12px;
+      color: #e0e0e0;
+      font-size: 1rem;
+      line-height: 1.6;
+      box-shadow: 0 1px 4px #0002;
+      max-width: 600px;
+    }
+    .toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #23283a;
+      color: #fff;
+      padding: 14px 32px;
+      border-radius: 8px;
+      box-shadow: 0 2px 12px #0007;
+      font-size: 1.1rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      z-index: 9999;
+    }
+    .toast.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .expanded {
+      max-width: 98vw !important;
+      max-height: 90vh !important;
+      border: 3px solid #4f8cff !important;
+      z-index: 10;
+    }
+    @media (max-width: 700px) {
+      .container { padding: 12px 2vw; }
+      .videos { flex-direction: column; gap: 12px; }
+      video { max-width: 98vw; max-height: 32vh; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Xem Chung <span style="font-size:1.2rem; color:#4f8cff;">💙</span></h1>
+    <div class="guide">
+      <b>Hướng dẫn:</b> <br>
+      1. Một người bấm <b>Chia sẻ màn hình</b>.<br>
+      2. Người còn lại sẽ tự động xem màn hình được chia sẻ.<br>
+      <span style="color:#a0e7ff;">Tip:</span> Có thể mở song song Messenger/Zalo để trò chuyện.
+    </div>
+  </header>
+  <div class="container">
+    <div class="controls">
+      <button id="share">Chia sẻ màn hình</button>
+      <button id="stopShare" style="display:none; background:linear-gradient(90deg,#ff4f4f,#ff6f6f);">Dừng chia sẻ</button>
+      <select id="quality" class="quality-select" title="Chọn chất lượng hình ảnh">
+        <option value="ultra">Siêu nét (4K, 60fps, max bitrate)</option>
+        <option value="high" selected>Rất nét (1080p, 60fps)</option>
+        <option value="medium">Trung bình (720p, 30fps)</option>
+        <option value="low">Tiết kiệm (480p, 24fps)</option>
+      </select>
+      <span class="status" id="status">Chưa kết nối</span>
+      <span class="viewer-count" id="viewerCount" title="Số người đang xem"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"></path><circle cx="12" cy="12" r="3"></circle></svg> <span id="viewerNum">1</span></span>
+    </div>
+    <div class="videos">
+      <div style="display:flex; flex-direction:column; align-items:center;">
+        <video id="localVideo" autoplay muted playsinline hidden></video>
+        <div class="video-controls" id="localVideoControls" hidden>
+          <button class="icon-btn" id="localFullscreen" title="Toàn màn hình">⛶</button>
+          <button class="icon-btn" id="localExpand" title="Mở rộng">⤢</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="main.js"></script>
+</body>
+</html> 
