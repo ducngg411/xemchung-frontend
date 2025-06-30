@@ -1,5 +1,5 @@
 // TODO: Thay đổi URL bên dưới thành URL Render backend của bạn khi deploy
-const SIGNALING_SERVER_URL = 'http://localhost:3000'; // ví dụ: 'https://xemchung-backend.onrender.com'
+const SIGNALING_SERVER_URL = 'https://xemchung-backend.onrender.com'; // ví dụ: 'https://xemchung-backend.onrender.com'
 const socket = io(SIGNALING_SERVER_URL);
 let pc = new RTCPeerConnection();
 let localStream;
