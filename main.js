@@ -63,6 +63,12 @@ function createPeerConnection() {
       remoteVideo.hidden = false;
       remoteVideoControls.hidden = false;
       setStatus('Đang xem màn hình đối phương', '#6f6fff');
+      remoteVideo.play().catch(() => {});
+      setTimeout(() => {
+        if (remoteVideo.paused || remoteVideo.readyState < 2) {
+          showToast('Không xem được màn hình? Hãy thử chọn chất lượng thấp hơn hoặc dùng WiFi mạnh.');
+        }
+      }, 5000);
     }
   };
 }
@@ -88,6 +94,23 @@ btnView.onclick = () => {
   createPeerConnection();
   socket.emit('viewer-ready');
 };
+
+function isMobile() {
+  return /android|iphone|ipad|ipod|iemobile|blackberry|bada/i.test(navigator.userAgent);
+}
+
+async function setPreferredCodec(pc, kind, mimeType) {
+  const senders = pc.getSenders().filter(s => s.track && s.track.kind === kind);
+  for (const sender of senders) {
+    const params = sender.getParameters();
+    if (!params.codecs) continue;
+    const codec = params.codecs.find(c => c.mimeType.toLowerCase().includes(mimeType));
+    if (codec) {
+      params.codecs = [codec, ...params.codecs.filter(c => c !== codec)];
+      await sender.setParameters(params);
+    }
+  }
+}
 
 shareBtn.onclick = async () => {
   try {
@@ -120,6 +143,7 @@ shareBtn.onclick = async () => {
         }, 500);
       }
     });
+    await setPreferredCodec(pc, 'video', 'h264');
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     socket.emit('signal', { desc: pc.localDescription });
@@ -166,6 +190,7 @@ socket.emit('get-viewer-count');
 socket.on('signal', async data => {
   if (role === 'viewer') {
     if (data.desc) {
+      await setPreferredCodec(pc, 'video', 'h264');
       await pc.setRemoteDescription(data.desc);
       remoteDescSet = true;
       // Add all queued ICE candidates
