@@ -59,6 +59,7 @@ btnView.onclick = () => {
   localVideo.hidden = true;
   remoteVideo.hidden = true;
   setStatus('Đang chờ người chia sẻ...', '#a0e7ff');
+  socket.emit('viewer-ready');
 };
 
 shareBtn.onclick = async () => {
@@ -183,6 +184,16 @@ function toggleExpand(video) {
 }
 localFullscreenBtn.onclick = () => toggleFullscreen(localVideo);
 localExpandBtn.onclick = () => toggleExpand(localVideo);
+
+// Lắng nghe viewer-ready (chỉ sharer xử lý)
+socket.on('viewer-ready', async () => {
+  if (role === 'sharer' && localStream) {
+    // Tạo lại offer gửi cho viewer mới
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    socket.emit('signal', { desc: pc.localDescription });
+  }
+});
 
 // Khi reload lại, reset trạng thái
 window.addEventListener('load', () => {
